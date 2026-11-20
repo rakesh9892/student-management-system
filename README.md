@@ -158,6 +158,50 @@ Open the local URL shown by Vite, typically:
 
 Make sure the backend is running before using the frontend.
 
+## Application Screenshots
+
+### Student Dashboard
+
+The dashboard displays student records, automatically generated admission numbers, search functionality, and actions to view, edit, or delete students.
+
+![Student Dashboard](screenshots/dashboard.png)
+
+### Add Student Form
+
+Add new students with personal and academic information, including an optional photograph.
+
+![Add Student Form](screenshots/add-student.png)
+
+### Student Details
+
+View complete student information, including the admission number and uploaded photograph.
+
+![Student Details](screenshots/student-details.png)
+
+## API Testing with Postman
+
+The REST API was tested using Postman to verify student CRUD operations, request validation, and API responses.
+
+### GET — Retrieve Students
+
+**Endpoint:** `GET /students`
+
+**Expected Status:** `200 OK`
+
+Returns student records in JSON format.
+
+![GET Students API Test](screenshots/api-get-students.png)
+
+### POST — Create Student
+
+**Endpoint:** `POST /students`
+
+**Expected Status:** `201 Created`
+
+Creates a student record and returns the automatically generated admission number.
+
+![POST Student API Test](screenshots/api-create-student.png)
+
 ## REST API Endpoints
 
 | Method | Endpoint | Description |
