@@ -1,8 +1,18 @@
 # Student Management System
 
-A full-stack Student Management System developed using React, Node.js, Express.js, and PostgreSQL.
+A full-stack Student Management System built using **React, Node.js, Express.js, and PostgreSQL**.
 
-This application allows users to add, view, update, search, and delete student records, including uploading student photographs. Each student receives a unique, automatically generated admission number.
+The application allows users to add, view, update, search, and delete student records, including uploading student photographs. Each student receives a unique, automatically generated admission number.
+
+## Live Demo
+
+**Frontend:** https://student-management-system-seven-pink.vercel.app
+
+**Backend API:** https://student-management-api-wadj.onrender.com
+
+**GitHub Repository:** https://github.com/rakesh9892/student-management-system
+
+> The backend is hosted on Render's free tier, so the first request may take some time after a period of inactivity.
 
 ## Technologies Used
 
@@ -16,10 +26,18 @@ This application allows users to add, view, update, search, and delete student r
 - Node.js
 - Express.js
 - Multer (photo uploads)
+- Cloudinary SDK
 
 **Database**
 - PostgreSQL
+- Neon (cloud-hosted PostgreSQL)
 - pg (Node.js PostgreSQL client)
+
+**Deployment**
+- Vercel — Frontend
+- Render — Backend
+- Neon — PostgreSQL database
+- Cloudinary — Student photo storage
 
 ## Features
 
@@ -34,6 +52,7 @@ This application allows users to add, view, update, search, and delete student r
 - Frontend and backend form validation
 - Responsive design for desktop and mobile devices
 - REST API integration
+- Cloud-based database and photo storage for deployment
 
 ## Project Structure
 
@@ -41,11 +60,11 @@ This application allows users to add, view, update, search, and delete student r
 student-management-system/
 │
 ├── backend/
+│   ├── cloudinary.js
 │   ├── db.js
 │   ├── server.js
 │   ├── upload.js
 │   ├── .env.example
-│   ├── .gitignore
 │   ├── package.json
 │   └── package-lock.json
 │
@@ -58,15 +77,16 @@ student-management-system/
 │   │   ├── components/
 │   │   │   ├── StudentDetails.jsx
 │   │   │   └── StudentForm.jsx
+│   │   ├── api.js
 │   │   ├── App.jsx
 │   │   ├── index.css
 │   │   └── main.jsx
-│   ├── .gitignore
 │   ├── eslint.config.js
 │   ├── index.html
 │   ├── package.json
 │   ├── package-lock.json
 │   └── vite.config.js
+│
 ├── screenshots/
 │   ├── dashboard.png
 │   ├── add-student.png
@@ -86,7 +106,7 @@ student-management-system/
 Make sure the following are installed:
 
 - Node.js and npm
-- PostgreSQL
+- PostgreSQL (for local database setup)
 - Git
 
 ### 1. Clone the Repository
@@ -96,8 +116,6 @@ git clone https://github.com/rakesh9892/student-management-system.git
 cd student-management-system
 ```
 
-Replace `YOUR_USERNAME` with the actual GitHub username after creating the repository.
-
 ### 2. Set Up PostgreSQL
 
 Create a PostgreSQL database named:
@@ -106,20 +124,24 @@ Create a PostgreSQL database named:
 student_management
 ```
 
-Connect to the newly created database using pgAdmin or psql, and execute the SQL script from `database.sql`.
+Connect to the database using pgAdmin or psql and execute the SQL script from `database.sql`.
 
 This creates the `students` table and the admission number sequence.
 
+For cloud deployment, the same SQL script can be executed in a Neon PostgreSQL database.
+
 ### 3. Configure the Backend
 
-Open a terminal and run:
+Open a terminal:
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file inside `backend` using `.env.example` as a reference.
+Create a `.env` file inside the `backend` directory.
+
+**Option A — Local PostgreSQL**
 
 ```env
 PORT=5000
@@ -130,7 +152,30 @@ DB_PASSWORD=your_postgresql_password
 DB_PORT=5432
 ```
 
-Replace the password with your PostgreSQL password.
+**Option B — Neon PostgreSQL**
+
+Instead of the local database variables, configure:
+
+```env
+PORT=5000
+DATABASE_URL=your_neon_postgresql_connection_string
+```
+
+**Optional — Cloudinary Photo Storage**
+
+To store uploaded photographs in Cloudinary, add:
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+When Cloudinary is not configured, photographs are stored locally in `backend/uploads/`.
+
+When Cloudinary is configured, uploaded photographs are stored in Cloudinary, and their URLs are saved in PostgreSQL.
+
+Never commit actual passwords, database connection strings, or API secrets to GitHub.
 
 Start the backend:
 
@@ -138,13 +183,13 @@ Start the backend:
 npm run dev
 ```
 
-The API runs at:
+The API runs locally at:
 
-`http://localhost:5000`
+http://localhost:5000
 
 ### 4. Configure the Frontend
 
-Open another terminal from the project root and run:
+Open another terminal from the project root:
 
 ```bash
 cd frontend
@@ -154,9 +199,17 @@ npm run dev
 
 Open the local URL shown by Vite, typically:
 
-`http://localhost:5173`
+http://localhost:5173
 
-Make sure the backend is running before using the frontend.
+By default, the frontend communicates with `http://localhost:5000`.
+
+To connect to a deployed backend, configure the following Vite environment variable:
+
+```env
+VITE_API_URL=https://student-management-api-wadj.onrender.com
+```
+
+For Vercel deployment, set `VITE_API_URL` in the project's environment variables.
 
 ## Application Screenshots
 
@@ -226,7 +279,7 @@ Creates a student record and returns the automatically generated admission numbe
 
 The admission number is automatically generated by PostgreSQL.
 
-Student photos are stored locally in the backend `uploads` directory, and their paths are saved in the database.
+Uploaded photographs are stored locally during development or in Cloudinary when configured. The corresponding photo URL is stored in the database.
 
 ## Validation
 
@@ -239,17 +292,43 @@ The application includes:
 - Gender validation
 - Date of birth validation
 - Duplicate email prevention
-- Photo type and size restrictions (maximum 2 MB)
+- Photo type restrictions (JPG, PNG, WEBP)
+- Maximum photo size of 2 MB
+
+## Deployment Architecture
+
+The deployed application uses the following architecture:
+
+```text
+User Browser
+     |
+     v
+Vercel (React Frontend)
+     |
+     | REST API Requests
+     v
+Render (Node.js + Express Backend)
+     |
+     +------> Neon PostgreSQL
+     |        (Student Records)
+     |
+     +------> Cloudinary
+              (Student Photographs)
+```
+
+The frontend communicates with the backend using the `VITE_API_URL` environment variable.
+
+The backend connects to Neon using `DATABASE_URL` and uploads photographs to Cloudinary using securely configured API credentials.
 
 ## Notes
 
-- Uploaded photos and environment variables are excluded from Git version control.
-- The PostgreSQL database must be configured before starting the backend.
-- The frontend and backend run as separate development servers.
-- The application uses a local backend API URL. Update the API URL if deploying the application.
-- Use fictional student information for demonstrations.
+- Environment variables and locally uploaded photos are excluded from Git version control.
+- The database must be configured before starting the backend.
+- The frontend and backend run as separate servers during local development.
+- The deployed application uses Vercel, Render, Neon, and Cloudinary.
+- Render's free instance may take additional time to respond after inactivity.
+- Use fictional student information when testing or demonstrating the public application.
 
 ## Author
 
-Developed by Rakesh Mane
-
+Developed by **Rakesh Mane**
