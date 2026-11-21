@@ -6,6 +6,7 @@
   const path = require("path");
   const upload = require("./upload");
   const fs = require("fs");
+  const cloudinary = require("./cloudinary");
 
   const app = express();
 
@@ -37,6 +38,59 @@
       }
     });
   };
+  
+    const useCloudinary = Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET
+    );
+
+    // Upload an image from memory to Cloudinary
+    const uploadToCloudinary = (buffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: "student-management-system",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) {
+              return reject(error);
+            }
+
+            resolve(result);
+          }
+        );
+
+        stream.end(buffer);
+      });
+    };
+
+    // Delete a Cloudinary image using its public ID
+    const deleteCloudinaryPhoto = async (photoUrl) => {
+      if (!photoUrl) return;
+
+      const url = new URL(photoUrl);
+      const expectedHost = `res.cloudinary.com`;
+
+      if (
+        url.hostname !== expectedHost ||
+        !url.pathname.startsWith(
+          `/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload/`
+        )
+      ) {
+        return;
+      }
+
+      const uploadPath = url.pathname.split("/upload/")[1];
+      if (!uploadPath) return;
+
+      const publicId = uploadPath
+        .replace(/^v\d+\//, "")
+        .replace(/\.[^.]+$/, "");
+
+      await cloudinary.uploader.destroy(publicId);
+    };
 
   // Test server
   app.get("/", (req, res) => {
@@ -351,23 +405,31 @@
     }
   });
 
+  
   // Upload or replace a student's photo
   app.post("/students/:id/photo", upload.single("photo"), async (req, res) => {
+    let newCloudinaryUrl = null;
+
+    const cleanupNewLocalFile = () => {
+      if (req.file?.filename) {
+        deletePhoto(`/uploads/${req.file.filename}`);
+      }
+    };
+
     try {
       const { id } = req.params;
-      // Validate student ID
+
       if (!isValidStudentId(id)) {
-        if (req.file) {
-          deletePhoto(`/uploads/${req.file.filename}`);
-        }
+        cleanupNewLocalFile();
 
         return res.status(400).json({
-          message: "Invalid student ID"
+          message: "Invalid student ID",
         });
       }
+
       if (!req.file) {
         return res.status(400).json({
-          message: "Student photo is required"
+          message: "Student photo is required",
         });
       }
 
@@ -377,39 +439,64 @@
       );
 
       if (existing.rows.length === 0) {
-        deletePhoto(`/uploads/${req.file.filename}`);
+        cleanupNewLocalFile();
 
         return res.status(404).json({
-          message: "Student not found"
+          message: "Student not found",
         });
       }
 
-      const photoUrl = `/uploads/${req.file.filename}`;
+      let photoUrl;
+
+      if (useCloudinary) {
+        const result = await uploadToCloudinary(req.file.buffer);
+        photoUrl = result.secure_url;
+        newCloudinaryUrl = photoUrl;
+      } else {
+        photoUrl = `/uploads/${req.file.filename}`;
+      }
 
       const result = await pool.query(
         `UPDATE students
-        SET photo_url = $1
-        WHERE id = $2
-        RETURNING *`,
+         SET photo_url = $1
+         WHERE id = $2
+         RETURNING *`,
         [photoUrl, id]
       );
 
-      deletePhoto(existing.rows[0].photo_url);
+      const oldPhotoUrl = existing.rows[0].photo_url;
+
+      if (oldPhotoUrl) {
+        try {
+          if (oldPhotoUrl.startsWith("https://res.cloudinary.com/")) {
+            await deleteCloudinaryPhoto(oldPhotoUrl);
+          } else if (oldPhotoUrl.startsWith("/uploads/")) {
+            deletePhoto(oldPhotoUrl);
+          }
+        } catch (cleanupError) {
+          console.error("Old photo cleanup error:", cleanupError);
+        }
+      }
 
       res.status(200).json({
         message: "Student photo uploaded successfully",
-        student: result.rows[0]
+        student: result.rows[0],
       });
-
     } catch (error) {
-      if (req.file) {
-        deletePhoto(`/uploads/${req.file.filename}`);
+      cleanupNewLocalFile();
+
+      if (newCloudinaryUrl) {
+        try {
+          await deleteCloudinaryPhoto(newCloudinaryUrl);
+        } catch (cleanupError) {
+          console.error("New photo cleanup error:", cleanupError);
+        }
       }
 
       console.error("Photo upload error:", error);
 
       res.status(500).json({
-        message: "Failed to upload student photo"
+        message: "Failed to upload student photo",
       });
     }
   });

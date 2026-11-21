@@ -1,3 +1,4 @@
+
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -6,7 +7,7 @@ const uploadDir = path.join(__dirname, "uploads");
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
-const storage = multer.diskStorage({
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
@@ -20,6 +21,16 @@ const storage = multer.diskStorage({
     cb(null, uniqueName);
   },
 });
+
+const useCloudinary = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+);
+
+const storage = useCloudinary
+  ? multer.memoryStorage()
+  : diskStorage;
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
