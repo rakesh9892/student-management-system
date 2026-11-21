@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../api";
 
 const initialForm = {
   name: "",
@@ -68,8 +69,8 @@ const initialForm = {
     const isEditing = Boolean(student);
 
     const url = isEditing
-      ? `http://localhost:5000/students/${student.id}`
-      : "http://localhost:5000/students";
+      ? `${API_URL}/students/${student.id}`
+      : `${API_URL}/students`;
 
     const response = await fetch(url, {
       method: isEditing ? "PUT" : "POST",
@@ -95,7 +96,7 @@ const initialForm = {
       photoData.append("photo", photo);
 
       const photoResponse = await fetch(
-        `http://localhost:5000/students/${studentId}/photo`,
+        `${API_URL}/students/${studentId}/photo`,
         {
           method: "POST",
           body: photoData,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import StudentForm from "./components/StudentForm";
 import StudentDetails from "./components/StudentDetails";
+import { API_URL, getPhotoUrl } from "./api";
 
   function App() {
   const [students, setStudents] = useState([]);
@@ -14,7 +15,7 @@ import StudentDetails from "./components/StudentDetails";
   useEffect(() => {
   const fetchStudents = async () => {
     try {
-      const response = await fetch("http://localhost:5000/students");
+      const response = await fetch(`${API_URL}/students`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch students");
@@ -55,7 +56,7 @@ import StudentDetails from "./components/StudentDetails";
 
   try {
     const response = await fetch(
-      `http://localhost:5000/students/${student.id}`,
+      `${API_URL}/students/${student.id}`,
       {
         method: "DELETE",
       }
@@ -158,7 +159,7 @@ import StudentDetails from "./components/StudentDetails";
                       <td className="p-4">
                         {student.photo_url ? (
                           <img
-                            src={`http://localhost:5000${student.photo_url}`}
+                            src={getPhotoUrl(student.photo_url)}
                             alt={student.name}
                             className="w-12 h-12 rounded-full object-cover"
                           />

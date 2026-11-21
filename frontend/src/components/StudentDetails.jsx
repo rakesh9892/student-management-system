@@ -1,3 +1,4 @@
+import { getPhotoUrl } from "../api";
 function StudentDetails({ student, onClose }) {
   const details = [
     ["Admission Number", student.admission_number],
@@ -32,7 +33,7 @@ function StudentDetails({ student, onClose }) {
         <div className="flex justify-center mb-6">
           {student.photo_url ? (
             <img
-              src={`http://localhost:5000${student.photo_url}`}
+              src={getPhotoUrl(student.photo_url)}
               alt={student.name}
               className="w-28 h-28 rounded-full object-cover border-4 border-blue-100"
             />
